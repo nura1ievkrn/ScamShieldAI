@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="{{ user.theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.settings }} — ScamShield</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="overflow:auto">
+
+<div class="page-layout">
+    <a href="/" class="back-btn">←
+        {% if lang == 'kz' %}Артқа{% elif lang == 'ru' %}Назад{% else %}Back{% endif %}
+    </a>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:32px">
+        <div>
+            <h1 class="page-title">⚙️ {{ t.settings }}</h1>
+            <p class="page-sub">{{ user.username }}</p>
+        </div>
+        <div class="lang-switch">
+            <a href="/set_language/kz" class="lang-btn {% if lang=='kz' %}active{% endif %}">KZ</a>
+            <a href="/set_language/ru" class="lang-btn {% if lang=='ru' %}active{% endif %}">RU</a>
+            <a href="/set_language/en" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
+        </div>
+    </div>
+
+    <form method="POST">
+
+        <!-- APPEARANCE -->
+        <div class="settings-section">
+            <div class="settings-title">
+                {% if lang == 'kz' %}СЫРТҚЫ КЕЙ{% elif lang == 'ru' %}ВНЕШНИЙ ВИД{% else %}APPEARANCE{% endif %}
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">
+                        {% if lang == 'kz' %}Тема{% elif lang == 'ru' %}Тема{% else %}Theme{% endif %}
+                    </div>
+                    <div class="setting-desc">
+                        {% if lang == 'kz' %}Түнгі / Күндізгі режим{% elif lang == 'ru' %}Тёмный / Светлый режим{% else %}Dark / Light mode{% endif %}
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <label style="cursor:pointer">
+                        <input type="radio" name="theme" value="dark" {{ 'checked' if user.theme == 'dark' else '' }}
+                            onchange="document.documentElement.setAttribute('data-theme','dark')">
+                        <span style="font-size:13px;color:var(--text2);margin-left:4px">🌙</span>
+                    </label>
+                    <label style="cursor:pointer">
+                        <input type="radio" name="theme" value="light" {{ 'checked' if user.theme == 'light' else '' }}
+                            onchange="document.documentElement.setAttribute('data-theme','light')">
+                        <span style="font-size:13px;color:var(--text2);margin-left:4px">☀️</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="settings-section">
+            <div class="settings-title">
+                {% if lang == 'kz' %}ХАБАРЛАНДЫРУЛАР{% elif lang == 'ru' %}УВЕДОМЛЕНИЯ{% else %}NOTIFICATIONS{% endif %}
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">{{ t.notifications }}</div>
+                    <div class="setting-desc">
+                        {% if lang == 'kz' %}Жоғары қауіп анықталғанда хабарлау
+                        {% elif lang == 'ru' %}Уведомлять при обнаружении высокого риска
+                        {% else %}Notify on high-risk detection{% endif %}
+                    </div>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" name="notifications" {{ 'checked' if user.notifications else '' }}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ANALYSIS -->
+        <div class="settings-section">
+            <div class="settings-title">
+                {% if lang == 'kz' %}АНАЛИЗ{% elif lang == 'ru' %}АНАЛИЗ{% else %}ANALYSIS{% endif %}
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">{{ t.deep_analysis }}</div>
+                    <div class="setting-desc">
+                        {% if lang == 'kz' %}Толықтылықты арттыру (Pro+ қажет)
+                        {% elif lang == 'ru' %}Углублённый анализ (требует Pro+)
+                        {% else %}Detailed multi-paragraph analysis (Pro+ required){% endif %}
+                    </div>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" name="deep_analysis"
+                        {{ 'checked' if user.deep_analysis else '' }}
+                        {{ '' if user.plan in ['pro', 'business'] else 'onclick="return showUpgrade()"' }}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ACCOUNT -->
+        <div class="settings-section">
+            <div class="settings-title">
+                {% if lang == 'kz' %}АККАУНТ{% elif lang == 'ru' %}АККАУНТ{% else %}ACCOUNT{% endif %}
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">
+                        {% if lang == 'kz' %}Жоспар{% elif lang == 'ru' %}План{% else %}Plan{% endif %}
+                    </div>
+                    <div class="setting-desc">
+                        <span class="plan-badge plan-{{ user.plan }}">{{ user.plan.upper() }}</span>
+                    </div>
+                </div>
+                <a href="/plans" class="btn-outline" style="padding:7px 14px;font-size:13px">
+                    {% if lang == 'kz' %}Жоспарды өзгерту{% elif lang == 'ru' %}Изменить план{% else %}Change plan{% endif %}
+                </a>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">
+                        {% if lang == 'kz' %}Бүгінгі сұраныстар
+                        {% elif lang == 'ru' %}Запросов сегодня
+                        {% else %}Requests today{% endif %}
+                    </div>
+                    <div class="setting-desc" style="font-family:var(--mono);font-size:13px">
+                        {{ user.requests_today }} / {{ user.get_daily_limit() }}
+                    </div>
+                </div>
+                <div></div>
+            </div>
+        </div>
+
+        <button class="form-btn" type="submit" style="max-width:200px">{{ t.save_settings }}</button>
+    </form>
+
+    <div style="margin-top:24px">
+        <a href="/logout" class="back-btn" style="color:var(--high);border-color:var(--high-bg)">
+            🚪 {{ t.logout }}
+        </a>
+    </div>
+</div>
+
+<script>
+function showUpgrade() {
+    const msgs = { kz: 'Терең анализ үшін Pro жоспары қажет', ru: 'Нужен Pro план для глубокого анализа', en: 'Pro plan required for deep analysis' };
+    alert(msgs['{{ lang }}'] || msgs.en);
+    return false;
+}
+</script>
+
+</body>
+</html>

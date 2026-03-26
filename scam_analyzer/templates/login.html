@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.login }} — ScamShield</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">⬡</div>
+            <div class="auth-logo-text">ScamShield AI</div>
+            <div class="auth-logo-sub">{{ t.subtitle }}</div>
+        </div>
+
+        <h1 class="auth-title">{{ t.login }}</h1>
+
+        {% if error %}
+        <div class="form-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">{{ t.username }}</label>
+                <input class="form-input" name="username" placeholder="{{ t.username }}" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ t.password }}</label>
+                <input class="form-input" name="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button class="form-btn" type="submit">{{ t.login }}</button>
+        </form>
+
+        <div class="auth-link">
+            {% if lang == 'kz' %}Аккаунтыңыз жоқ па? {% elif lang == 'ru' %}Нет аккаунта? {% else %}No account? {% endif %}
+            <a href="/register">{{ t.register }}</a>
+        </div>
+
+        <div class="auth-link" style="margin-top:12px">
+            <a href="/set_language/kz">KZ</a> · <a href="/set_language/ru">RU</a> · <a href="/set_language/en">EN</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

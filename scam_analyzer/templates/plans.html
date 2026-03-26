@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.plans }} — ScamShield</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="overflow:auto">
+
+<div class="page-layout">
+    <a href="/" class="back-btn">← {{ t.new_chat }}</a>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+            <h1 class="page-title">⭐ {{ t.plans }}</h1>
+            <p class="page-sub">
+                {% if lang == 'kz' %}Қажетті жоспарды таңдаңыз
+                {% elif lang == 'ru' %}Выберите подходящий план
+                {% else %}Choose the right plan for you{% endif %}
+            </p>
+        </div>
+        <div class="lang-switch">
+            <a href="/set_language/kz" class="lang-btn {% if lang=='kz' %}active{% endif %}">KZ</a>
+            <a href="/set_language/ru" class="lang-btn {% if lang=='ru' %}active{% endif %}">RU</a>
+            <a href="/set_language/en" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
+        </div>
+    </div>
+
+    <div class="plans-grid">
+        <!-- FREE -->
+        <div class="plan-card">
+            <div class="plan-name">{{ t.free_plan }}</div>
+            <div class="plan-price">₸0 <span>/ {{ t.monthly }}</span></div>
+            <ul class="plan-features">
+                <li>10 {{ t.per_req }}</li>
+                <li>
+                    {% if lang == 'kz' %}Мәтін анализі
+                    {% elif lang == 'ru' %}Анализ текста
+                    {% else %}Text analysis{% endif %}
+                </li>
+                <li>
+                    {% if lang == 'kz' %}Нөмір тексеру
+                    {% elif lang == 'ru' %}Проверка номера
+                    {% else %}Phone check{% endif %}
+                </li>
+                <li>
+                    {% if lang == 'kz' %}Тарих (жергілікті)
+                    {% elif lang == 'ru' %}История (локальная)
+                    {% else %}History (local){% endif %}
+                </li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                {% if current_user.plan == 'free' %}
+                <span class="btn-plan btn-plan-outline" style="cursor:default;opacity:0.5">
+                    {% if lang == 'kz' %}Қазіргі жоспар{% elif lang == 'ru' %}Текущий план{% else %}Current plan{% endif %}
+                </span>
+                {% else %}
+                <a href="/upgrade/free" class="btn-plan btn-plan-outline">
+                    {% if lang == 'kz' %}Таңдау{% elif lang == 'ru' %}Выбрать{% else %}Select{% endif %}
+                </a>
+                {% endif %}
+            {% else %}
+            <a href="/register" class="btn-plan btn-plan-outline">
+                {% if lang == 'kz' %}Тіркелу{% elif lang == 'ru' %}Зарегистрироваться{% else %}Sign up{% endif %}
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- PRO -->
+        <div class="plan-card popular">
+            <div class="popular-tag">POPULAR</div>
+            <div class="plan-name">{{ t.pro_plan }}</div>
+            <div class="plan-price">₸2,990 <span>/ {{ t.monthly }}</span></div>
+            <ul class="plan-features">
+                <li>100 {{ t.per_req }}</li>
+                <li>
+                    {% if lang == 'kz' %}Терең анализ
+                    {% elif lang == 'ru' %}Глубокий анализ
+                    {% else %}Deep analysis{% endif %}
+                </li>
+                <li>
+                    {% if lang == 'kz' %}Сурет анализі
+                    {% elif lang == 'ru' %}Анализ изображений
+                    {% else %}Image analysis{% endif %}
+                </li>
+                <li>
+                    {% if lang == 'kz' %}Басымдық қолдау
+                    {% elif lang == 'ru' %}Приоритетная поддержка
+                    {% else %}Priority support{% endif %}
+                </li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                {% if current_user.plan == 'pro' %}
+                <span class="btn-plan btn-plan-solid" style="cursor:default;opacity:0.7">
+                    {% if lang == 'kz' %}Қазіргі жоспар{% elif lang == 'ru' %}Текущий план{% else %}Current plan{% endif %}
+                </span>
+                {% else %}
+                <a href="/upgrade/pro" class="btn-plan btn-plan-solid">
+                    {% if lang == 'kz' %}Pro алу{% elif lang == 'ru' %}Получить Pro{% else %}Get Pro{% endif %}
+                </a>
+                {% endif %}
+            {% else %}
+            <a href="/register" class="btn-plan btn-plan-solid">
+                {% if lang == 'kz' %}Pro алу{% elif lang == 'ru' %}Получить Pro{% else %}Get Pro{% endif %}
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- BUSINESS -->
+        <div class="plan-card">
+            <div class="plan-name">{{ t.business_plan }}</div>
+            <div class="plan-price">₸9,990 <span>/ {{ t.monthly }}</span></div>
+            <ul class="plan-features">
+                <li>{{ t.unlimited }}</li>
+                <li>API {% if lang == 'kz' %}қолжетімділігі{% elif lang == 'ru' %}доступ{% else %}access{% endif %}</li>
+                <li>
+                    {% if lang == 'kz' %}Толық статистика
+                    {% elif lang == 'ru' %}Полная статистика
+                    {% else %}Full statistics{% endif %}
+                </li>
+                <li>
+                    {% if lang == 'kz' %}Жеке менеджер
+                    {% elif lang == 'ru' %}Персональный менеджер
+                    {% else %}Dedicated manager{% endif %}
+                </li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                {% if current_user.plan == 'business' %}
+                <span class="btn-plan btn-plan-gold" style="cursor:default;opacity:0.7">
+                    {% if lang == 'kz' %}Қазіргі жоспар{% elif lang == 'ru' %}Текущий план{% else %}Current plan{% endif %}
+                </span>
+                {% else %}
+                <a href="/upgrade/business" class="btn-plan btn-plan-gold">
+                    {% if lang == 'kz' %}Бизнес алу{% elif lang == 'ru' %}Получить Business{% else %}Get Business{% endif %}
+                </a>
+                {% endif %}
+            {% else %}
+            <a href="/register" class="btn-plan btn-plan-gold">
+                {% if lang == 'kz' %}Бизнес алу{% elif lang == 'ru' %}Получить Business{% else %}Get Business{% endif %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

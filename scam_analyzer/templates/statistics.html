@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.statistics }} — ScamShield</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="overflow:auto">
+
+<div class="page-layout">
+    <a href="/" class="back-btn">← {{ t.new_chat }}</a>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:32px">
+        <div>
+            <h1 class="page-title">📊 {{ t.statistics }}</h1>
+            <p class="page-sub">
+                {% if lang == 'kz' %}Соңғы 7 күндегі деректер
+                {% elif lang == 'ru' %}Данные за последние 7 дней
+                {% else %}Data for the last 7 days{% endif %}
+            </p>
+        </div>
+        <div class="lang-switch">
+            <a href="/set_language/kz" class="lang-btn {% if lang=='kz' %}active{% endif %}">KZ</a>
+            <a href="/set_language/ru" class="lang-btn {% if lang=='ru' %}active{% endif %}">RU</a>
+            <a href="/set_language/en" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
+        </div>
+    </div>
+
+    {% set total = stats|sum(attribute='total_checks') %}
+    {% set scams = stats|sum(attribute='scam_detected') %}
+    {% set safe = stats|sum(attribute='safe_detected') %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">{{ t.today_checks }}</div>
+            <div class="stat-value">{{ stats[0].total_checks if stats else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">{{ t.scam_found }}</div>
+            <div class="stat-value high">{{ scams }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">{{ t.safe_found }}</div>
+            <div class="stat-value low">{{ safe }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">
+                {% if lang == 'kz' %}Жалпы {% elif lang == 'ru' %}Всего {% else %}Total {% endif %}
+            </div>
+            <div class="stat-value">{{ total }}</div>
+        </div>
+    </div>
+
+    <div class="history-table">
+        <div class="table-header">
+            <div>{% if lang == 'kz' %}Күн{% elif lang == 'ru' %}Дата{% else %}Date{% endif %}</div>
+            <div>{% if lang == 'kz' %}Тексерілді{% elif lang == 'ru' %}Проверено{% else %}Checked{% endif %}</div>
+            <div>{% if lang == 'kz' %}Алаяқтық{% elif lang == 'ru' %}Мошенничеств{% else %}Scams{% endif %}</div>
+            <div>{% if lang == 'kz' %}Қауіпсіз{% elif lang == 'ru' %}Безопасных{% else %}Safe{% endif %}</div>
+        </div>
+        {% for s in stats %}
+        <div class="table-row">
+            <div style="font-family:var(--mono);font-size:13px;color:var(--text3)">{{ s.date }}</div>
+            <div style="font-weight:700">{{ s.total_checks }}</div>
+            <div style="color:var(--high);font-weight:700">{{ s.scam_detected }}</div>
+            <div style="color:var(--low);font-weight:700">{{ s.safe_detected }}</div>
+        </div>
+        {% else %}
+        <div class="table-row" style="grid-template-columns:1fr">
+            <div style="color:var(--text3);text-align:center;padding:20px">
+                {% if lang == 'kz' %}Деректер жоқ{% elif lang == 'ru' %}Нет данных{% else %}No data yet{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Check type breakdown -->
+    {% if stats %}
+    <div style="margin-top:24px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+        <div class="settings-title">
+            {% if lang == 'kz' %}Тексеру түрлері (бүгін)
+            {% elif lang == 'ru' %}Типы проверок (сегодня)
+            {% else %}Check types (today){% endif %}
+        </div>
+        {% set today = stats[0] %}
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px">
+            <div style="text-align:center">
+                <div style="font-size:28px;font-weight:800;font-family:var(--mono)">{{ today.text_checks }}</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:4px">💬 {{ t.new_chat }}</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:28px;font-weight:800;font-family:var(--mono)">{{ today.phone_checks }}</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:4px">📱 {{ t.phone_check }}</div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:28px;font-weight:800;font-family:var(--mono)">{{ today.link_checks }}</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:4px">🔗 {{ t.link_check }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
