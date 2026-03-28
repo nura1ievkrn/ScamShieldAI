@@ -28,7 +28,7 @@ load_dotenv()
 # ─── OPENROUTER CONFIG ────────────────────────────────────────────────────────
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "liquid/lfm-2.5-1.2b-thinking:free"
+OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
 
 def call_openrouter(messages, max_tokens=1500):
     """Universal OpenRouter API call"""

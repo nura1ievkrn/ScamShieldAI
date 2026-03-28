@@ -79,6 +79,48 @@
         </div>
 
         <div class="topbar-right">
+
+            <!-- ── EXPORT BUTTON ── -->
+            <div class="export-menu" id="exportMenuWrap">
+                <button class="export-toggle-btn" id="exportToggleBtn"
+                        onclick="toggleExportMenu()"
+                        title="{{ 'Чатты жүктеу' if lang=='kz' else ('Скачать чат' if lang=='ru' else 'Download chat') }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>{{ 'Экспорт' if lang in ['kz','ru'] else 'Export' }}</span>
+                </button>
+                <div class="export-dropdown" id="exportDropdown">
+                    <div class="export-dropdown-title">
+                        {{ 'Форматты таңдаңыз' if lang=='kz' else ('Выберите формат' if lang=='ru' else 'Choose format') }}
+                    </div>
+                    <button class="export-item" onclick="exportChat('txt')">
+                        <span class="export-item-icon">📄</span>
+                        <span class="export-item-info">
+                            <span class="export-item-name">TXT</span>
+                            <span class="export-item-desc">{{ 'Таза мәтін' if lang=='kz' else ('Простой текст' if lang=='ru' else 'Plain text') }}</span>
+                        </span>
+                    </button>
+                    <button class="export-item" onclick="exportChat('json')">
+                        <span class="export-item-icon">📋</span>
+                        <span class="export-item-info">
+                            <span class="export-item-name">JSON</span>
+                            <span class="export-item-desc">{{ 'Деректер' if lang=='kz' else ('Данные' if lang=='ru' else 'Raw data') }}</span>
+                        </span>
+                    </button>
+                    <button class="export-item" onclick="exportChat('pdf')">
+                        <span class="export-item-icon">📑</span>
+                        <span class="export-item-info">
+                            <span class="export-item-name">PDF</span>
+                            <span class="export-item-desc">{{ 'Басып шығару' if lang=='kz' else ('Для печати' if lang=='ru' else 'Print / save') }}</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <!-- ── /EXPORT BUTTON ── -->
+
             <div class="lang-switch">
                 <a href="/set_language/kz" class="lang-btn {% if lang=='kz' %}active{% endif %}">KZ</a>
                 <a href="/set_language/ru" class="lang-btn {% if lang=='ru' %}active{% endif %}">RU</a>
@@ -197,6 +239,9 @@ function toggleUserMenu() {
 document.addEventListener('click', e => {
     if (!e.target.closest('.user-menu')) {
         document.getElementById('userDropdown')?.classList.remove('show');
+    }
+    if (!e.target.closest('.export-menu')) {
+        document.getElementById('exportDropdown')?.classList.remove('show');
     }
 });
 
@@ -415,6 +460,372 @@ function clearFile() {
     currentFile = null;
     document.getElementById('fileInput').value = '';
     document.getElementById('filePreview').style.display = 'none';
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────────────
+function toggleExportMenu() {
+    document.getElementById('exportDropdown').classList.toggle('show');
+}
+
+/** Strip <br> and HTML tags, returning plain text */
+function stripHtml(html) {
+    return html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+}
+
+/**
+ * Remove the leading language label (KAZAKH: / RUSSIAN: / ENGLISH:)
+ * that extract_language_block leaves at the start of result HTML.
+ */
+function cleanResult(html) {
+    return html
+        .replace(/^(KAZAKH|RUSSIAN|ENGLISH):\s*(<br\s*\/?>)?\s*/i, '')
+        .trim();
+}
+
+/** Get a human-readable title for the current chat */
+function getChatTitle() {
+    if (currentChatId) {
+        const chat = chatHistory.find(c => c.id === currentChatId);
+        if (chat) return chat.title;
+    }
+    return 'chat';
+}
+
+/** Trigger a file download in the browser */
+function downloadBlob(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Main export dispatcher */
+function exportChat(format) {
+    // Close the dropdown immediately
+    document.getElementById('exportDropdown').classList.remove('show');
+
+    const emptyMsg = { kz: 'Чат бос', ru: 'Чат пуст', en: 'Chat is empty' };
+    if (currentMessages.length === 0) {
+        alert(emptyMsg[lang] || emptyMsg.en);
+        return;
+    }
+
+    const chatTitle  = getChatTitle();
+    const timestamp  = new Date().toLocaleString(
+        lang === 'kz' ? 'kk-KZ' : lang === 'ru' ? 'ru-RU' : 'en-US'
+    );
+    const fileSlug   = 'scamshield-' + new Date().toISOString().slice(0, 10);
+
+    // ── JSON ──────────────────────────────────────────────────────────────
+    if (format === 'json') {
+        const payload = {
+            exported_at: new Date().toISOString(),
+            title: chatTitle,
+            lang,
+            messages: currentMessages.map(msg => {
+                if (msg.type === 'user') {
+                    return { role: 'user', text: msg.text };
+                }
+                const cleaned = cleanResult(msg.result);
+                return {
+                    role: 'assistant',
+                    result_html: cleaned,
+                    result_text: stripHtml(cleaned),
+                    score: msg.score,
+                    level: msg.level
+                };
+            })
+        };
+        downloadBlob(
+            JSON.stringify(payload, null, 2),
+            fileSlug + '.json',
+            'application/json'
+        );
+        return;
+    }
+
+    // ── TXT ───────────────────────────────────────────────────────────────
+    if (format === 'txt') {
+        const sep = '─'.repeat(52);
+        const header = [
+            '⬡  ScamShield AI',
+            `   ${chatTitle}`,
+            `   ${timestamp}`,
+            sep,
+            ''
+        ].join('\n');
+
+        const riskLabels = {
+            low:    { kz: 'Төмен қауіп',  ru: 'Низкий риск',   en: 'Low risk'    },
+            medium: { kz: 'Орташа қауіп', ru: 'Средний риск',  en: 'Medium risk' },
+            high:   { kz: 'Жоғары қауіп', ru: 'Высокий риск',  en: 'High risk'   }
+        };
+
+        const lines = [];
+        currentMessages.forEach(msg => {
+            if (msg.type === 'user') {
+                const youLabel = { kz: 'СІЗ', ru: 'ВЫ', en: 'YOU' }[lang] || 'YOU';
+                lines.push(`[ ${youLabel} ]`);
+                lines.push(msg.text);
+            } else {
+                const aiLabel = 'ScamShield AI';
+                const rLabel  = (riskLabels[msg.level] || {})[lang] || msg.level;
+                lines.push(`[ ${aiLabel} ]  ${rLabel} · ${msg.score}%`);
+                lines.push(stripHtml(cleanResult(msg.result)));
+            }
+            lines.push('');
+        });
+
+        const footer = [sep, `ScamShield AI  ·  scamshield.kz`].join('\n');
+        downloadBlob(
+            header + lines.join('\n') + '\n' + footer,
+            fileSlug + '.txt',
+            'text/plain;charset=utf-8'
+        );
+        return;
+    }
+
+    // ── PDF (print-to-PDF via new tab) ────────────────────────────────────
+    if (format === 'pdf') {
+        const riskColors   = { low: '#16a34a', medium: '#d97706', high: '#dc2626' };
+        const riskBgColors = { low: '#f0fdf4', medium: '#fffbeb', high: '#fef2f2' };
+        const riskBorders  = { low: '#bbf7d0', medium: '#fde68a', high: '#fecaca' };
+        const riskLabels   = {
+            low:    { kz: 'Төмен қауіп',  ru: 'Низкий риск',  en: 'Low risk'    },
+            medium: { kz: 'Орташа қауіп', ru: 'Средний риск', en: 'Medium risk' },
+            high:   { kz: 'Жоғары қауіп', ru: 'Высокий риск', en: 'High risk'   }
+        };
+        const youLabel = { kz: 'Сіз', ru: 'Вы', en: 'You' }[lang] || 'You';
+        const aiLabel  = 'ScamShield AI';
+
+        let msgHtml = '';
+        currentMessages.forEach((msg, idx) => {
+            if (msg.type === 'user') {
+                msgHtml += `
+                <div class="msg">
+                    <div class="msg-sender user-sender">
+                        <span class="sender-dot user-dot"></span>${youLabel}
+                    </div>
+                    <div class="user-bubble">${escHtml(msg.text)}</div>
+                </div>`;
+            } else {
+                const color     = riskColors[msg.level]   || '#555';
+                const bgColor   = riskBgColors[msg.level] || '#f9f9f9';
+                const bdColor   = riskBorders[msg.level]  || '#e5e5e5';
+                const rLabel    = (riskLabels[msg.level] || {})[lang] || msg.level;
+                const cleaned   = cleanResult(msg.result);
+                const pct       = Math.min(msg.score, 100);
+                const barEmpty  = 100 - pct;
+                msgHtml += `
+                <div class="msg">
+                    <div class="msg-sender ai-sender">
+                        <span class="sender-dot ai-dot"></span>${aiLabel}
+                    </div>
+                    <div class="ai-bubble" style="background:${bgColor};border-color:${bdColor}">
+                        <div class="risk-row">
+                            <span class="risk-pill" style="background:${color}">${rLabel}</span>
+                            <span class="risk-score" style="color:${color}">${pct}%</span>
+                        </div>
+                        <div class="risk-bar">
+                            <div class="risk-fill" style="width:${pct}%;background:${color}"></div>
+                        </div>
+                        <div class="result-body">${cleaned}</div>
+                    </div>
+                </div>`;
+            }
+        });
+
+        const printDoc = `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<title>ScamShield — ${escHtml(chatTitle)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    /* Inter is universal, renders identically on any OS */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13.5px;
+    line-height: 1.7;
+    padding: 48px 56px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #6c63ff;
+    margin-bottom: 36px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .doc-logo-wrap {
+    width: 44px; height: 44px;
+    background: #6c63ff;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #fff;
+    flex-shrink: 0;
+  }
+  .doc-title  { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; }
+  .doc-sub    { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .doc-date   { font-size: 11px; color: #94a3b8; text-align: right; }
+
+  /* ── MESSAGES ── */
+  .msg { margin-bottom: 24px; }
+
+  .msg-sender {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .sender-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .user-sender { color: #6c63ff; }
+  .user-dot    { background: #6c63ff; }
+  .ai-sender   { color: #475569; }
+  .ai-dot      { background: #94a3b8; }
+
+  /* User bubble */
+  .user-bubble {
+    background: #f1efff;
+    border: 1px solid #c7c2f8;
+    border-radius: 4px 12px 12px 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #1e1b4b;
+    word-break: break-word;
+  }
+
+  /* AI bubble */
+  .ai-bubble {
+    border: 1px solid;
+    border-radius: 12px 4px 12px 12px;
+    padding: 14px 18px;
+    word-break: break-word;
+  }
+
+  /* Risk row */
+  .risk-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .risk-pill {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+  }
+  .risk-score {
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  /* Risk bar */
+  .risk-bar {
+    height: 5px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .risk-fill {
+    height: 100%;
+    border-radius: 100px;
+  }
+
+  /* Result body */
+  .result-body {
+    font-size: 13.5px;
+    line-height: 1.72;
+    color: #1e293b;
+  }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: #94a3b8;
+  }
+
+  @media print {
+    body { padding: 0; font-size: 12.5px; }
+    @page { margin: 1.8cm 1.6cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="header-left">
+      <div class="doc-logo-wrap">⬡</div>
+      <div>
+        <div class="doc-title">ScamShield AI</div>
+        <div class="doc-sub">${escHtml(chatTitle)}</div>
+      </div>
+    </div>
+    <div class="doc-date">${timestamp}</div>
+  </div>
+
+  ${msgHtml}
+
+  <div class="doc-footer">
+    <span>ScamShield AI &nbsp;·&nbsp; scamshield.kz</span>
+    <span>${timestamp}</span>
+  </div>
+
+  <script>
+    // Wait for fonts, then print
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { setTimeout(() => window.print(), 200); });
+    } else {
+      window.addEventListener('load', () => { setTimeout(() => window.print(), 600); });
+    }
+  <\/script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            const msg = { kz: 'Popup бұғатталған. Сайт үшін popup рұқсат беріңіз.', ru: 'Popup заблокирован. Разрешите всплывающие окна для этого сайта.', en: 'Popup blocked. Please allow popups for this site.' };
+            alert(msg[lang] || msg.en);
+            return;
+        }
+        win.document.write(printDoc);
+        win.document.close();
+    }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
