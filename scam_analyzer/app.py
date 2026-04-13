@@ -11,12 +11,23 @@ from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 
 csrf = CSRFProtect(app)
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+# ── RATE LIMITER ──────────────────────────────────────────────────────────────
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[],  # глобальный лимит отключён — только точечные
+    storage_uri="memory://"
+)
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
@@ -25,9 +36,27 @@ def handle_csrf_error(e):
     return render_template("login.html", t=t, lang=lang,
                            error="Сессия устарела. Повторите попытку."), 400
 
+@app.errorhandler(429)
+def handle_rate_limit(e):
+    msg = {
+        'kz': 'Тым көп сұраныс. Біраз күтіңіз.',
+        'ru': 'Слишком много запросов. Подождите немного.',
+        'en': 'Too many requests. Please wait.',
+    }
+    lang = get_lang()
+    # AJAX запрос — вернуть JSON
+    if request.is_json or request.path == '/analyze':
+        return jsonify({"error": msg.get(lang, msg['en']), "score": 0}), 429
+    # Обычный запрос — показать страницу
+    t = get_t()
+    return render_template("login.html", t=t, lang=lang,
+                           error=msg.get(lang, msg['en'])), 429
+
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 db = SQLAlchemy(app)
 
 login_manager = LoginManager(app)
@@ -573,6 +602,8 @@ def set_language(lang):
 
 
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+
 def register():
     t = get_t()
     error = None
@@ -581,7 +612,15 @@ def register():
         password = request.form.get("password", "")
         confirm  = request.form.get("confirm_password", "")
         email    = request.form.get("email", "")
-        if password != confirm:
+        MIN_PASSWORD_LENGTH = 8
+
+        if len(password) < MIN_PASSWORD_LENGTH:
+            error = {
+                'kz': f'Құпия сөз кемінде {MIN_PASSWORD_LENGTH} символ болуы керек',
+                'ru': f'Пароль должен быть не менее {MIN_PASSWORD_LENGTH} символов',
+                'en': f'Password must be at least {MIN_PASSWORD_LENGTH} characters',
+            }.get(lang, f'Min {MIN_PASSWORD_LENGTH} characters')
+        elif password != confirm:
             error = t["passwords_no_match"]
         elif User.query.filter_by(username=username).first():
             error = t["user_exists"]
@@ -596,6 +635,8 @@ def register():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+
 def login():
     t = get_t()
     error = None
@@ -662,6 +703,8 @@ def upgrade(plan):
 # ─── ANALYZE API ──────────────────────────────────────────────────────────────
 
 @app.route("/analyze", methods=["POST"])
+@limiter.limit("30 per minute")
+
 @csrf.exempt
 def analyze():
     lang = get_lang()
