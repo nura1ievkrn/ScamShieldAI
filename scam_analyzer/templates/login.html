@@ -23,6 +23,7 @@
         {% endif %}
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label class="form-label">{{ t.username }}</label>
                 <input class="form-input" name="username" placeholder="{{ t.username }}" autocomplete="username" required>

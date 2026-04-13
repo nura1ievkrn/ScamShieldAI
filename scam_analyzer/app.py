@@ -10,10 +10,20 @@ from io import BytesIO
 from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "scam_analyzer_secret_2024"
+app.secret_key = os.getenv("SECRET_KEY")
+
+csrf = CSRFProtect(app)
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    t = get_t()
+    lang = get_lang()
+    return render_template("login.html", t=t, lang=lang,
+                           error="Сессия устарела. Повторите попытку."), 400
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -652,6 +662,7 @@ def upgrade(plan):
 # ─── ANALYZE API ──────────────────────────────────────────────────────────────
 
 @app.route("/analyze", methods=["POST"])
+@csrf.exempt
 def analyze():
     lang = get_lang()
     t    = TRANSLATIONS[lang]
